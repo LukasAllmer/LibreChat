@@ -78,29 +78,25 @@ const getMCPTools = async (req, res) => {
     const mcpManager = getMCPManager();
     const mcpServers = {};
 
-    const cachePromises = configuredServers.map((serverName) =>
-      getMCPServerTools(userId, serverName).then((tools) => ({ serverName, tools })),
-    );
-    const cacheResults = await Promise.all(cachePromises);
-
     const serverToolsMap = new Map();
-    for (const { serverName, tools } of cacheResults) {
-      if (tools) {
-        serverToolsMap.set(serverName, tools);
-        continue;
-      }
+    for (const serverName of configuredServers) {
+      let serverTools = null;
 
-      let serverTools;
       try {
         serverTools = await mcpManager.getServerToolFunctions(userId, serverName);
       } catch (error) {
-        logger.error(`[getMCPTools] Error fetching tools for server ${serverName}:`, error);
-        continue;
+        logger.warn(`[getMCPTools] Live fetch failed for server ${serverName}, using cache fallback`, error);
       }
+
+      if (!serverTools) {
+        serverTools = await getMCPServerTools(userId, serverName);
+      }
+
       if (!serverTools) {
         logger.debug(`[getMCPTools] No tools found for server ${serverName}`);
         continue;
       }
+
       serverToolsMap.set(serverName, serverTools);
 
       if (Object.keys(serverTools).length > 0) {

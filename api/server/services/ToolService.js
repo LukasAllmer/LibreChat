@@ -52,6 +52,7 @@ const {
 const {
   getEndpointsConfig,
   getMCPServerTools,
+  cacheMCPServerTools,
   getCachedTools,
 } = require('~/server/services/Config');
 const { processFileURL, uploadImageBuffer } = require('~/server/services/Files/process');
@@ -66,7 +67,7 @@ const { recordUsage } = require('~/server/services/Threads');
 const { loadTools } = require('~/app/clients/tools/util');
 const { redactMessage } = require('~/config/parsers');
 const { findPluginAuthsByKeys } = require('~/models');
-const { getFlowStateManager } = require('~/config');
+const { getFlowStateManager, getMCPManager } = require('~/config');
 const { getLogStores } = require('~/cache');
 
 const domainSeparatorRegex = new RegExp(actionDomainSeparator, 'g');
@@ -568,6 +569,19 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
   };
 
   const getOrFetchMCPServerTools = async (userId, serverName) => {
+    try {
+      const mcpManager = getMCPManager(userId);
+      const liveTools = await mcpManager.getServerToolFunctions(userId, serverName);
+      if (liveTools && Object.keys(liveTools).length > 0) {
+        cacheMCPServerTools({ userId, serverName, serverTools: liveTools }).catch((err) =>
+          logger.error(`[Tool Definitions] Failed to refresh MCP tool cache for ${serverName}:`, err),
+        );
+        return liveTools;
+      }
+    } catch (error) {
+      logger.debug(`[Tool Definitions] Live MCP tool fetch failed for ${serverName}:`, error);
+    }
+
     const cached = await getMCPServerTools(userId, serverName);
     if (cached) {
       return cached;

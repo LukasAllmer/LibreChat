@@ -8,7 +8,10 @@ import {
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { WebSocketClientTransport } from '@modelcontextprotocol/sdk/client/websocket.js';
-import { ResourceListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  ResourceListChangedNotificationSchema,
+  ToolListChangedNotificationSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type {
@@ -764,6 +767,10 @@ export class MCPConnection extends EventEmitter {
   private subscribeToResources(): void {
     this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
       this.emit('resourcesChanged');
+    });
+
+    this.client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
+      this.emit('toolsChanged');
     });
   }
 
